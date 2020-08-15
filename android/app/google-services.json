@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "992293429203",
+    "firebase_url": "https://micromet-chile.firebaseio.com",
+    "project_id": "micromet-chile",
+    "storage_bucket": "micromet-chile.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:992293429203:android:6864ae7399030f98415926",
+        "android_client_info": {
+          "package_name": "com.memoria.micromet"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "992293429203-b97eg819hs7thh5akjmbd10pb6pv62ge.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBy8yzJKeghZbnl9S9Aqip9CMSUguAW2xM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "992293429203-b97eg819hs7thh5akjmbd10pb6pv62ge.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
