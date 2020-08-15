@@ -1,7 +1,11 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:fl_animated_linechart/chart/animated_line_chart.dart';
 import 'package:fl_animated_linechart/chart/line_chart.dart';
+import 'package:flare_flutter/flare_actor.dart';
+import 'package:flare_flutter/flare_cache_builder.dart';
+import 'package:flare_flutter/provider/asset_flare.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:micromet/Pages/HomePage.dart';
 import 'package:micromet/Widgets/stations.dart';
@@ -27,6 +31,9 @@ class _GraphicsState extends State<Graphics> {
   bool loaded = false;
   String actualStation = "";
   bool dataExist = true;
+  bool isLoggedGoogle;
+  String _animationName = "Untitled";
+  final asset = AssetFlare(bundle: rootBundle, name: "assets/nodata.flr");
 
   Map<DateTime, double> createLineForHumidity() {
     Map<DateTime, double> data = {};
@@ -85,7 +92,7 @@ class _GraphicsState extends State<Graphics> {
     if (chartIndex == 1) {
       //Se puede traer la fecha y hora de la api y formatearla para usarla en data
       chart = LineChart.fromDateTimeMaps(
-          [createLineForHumidity()], [Colors.brown], ['% de Humedad']);
+          [createLineForHumidity()], [Colors.blue[100]], ['% de Humedad']);
     } else if (chartIndex == 2) {
       chart = LineChart.fromDateTimeMaps(
           [createLineForTemperature()], [Colors.red], ['Temperatura']);
@@ -118,170 +125,163 @@ class _GraphicsState extends State<Graphics> {
                           backgroundColor: Colors.transparent,
                           elevation: 0,
                           actions: <Widget>[
-                            IconButton(
-                                icon: Icon(
-                                  FontAwesomeIcons.satellite,
-                                  color: Colors.white,
-                                ),
-                                onPressed: () {
-                                  changeStation();
-                                })
+                            stations.length > 1
+                                ? IconButton(
+                                    icon: Icon(
+                                      FontAwesomeIcons.satellite,
+                                      color: Colors.white,
+                                    ),
+                                    onPressed: () {
+                                      changeStation();
+                                    })
+                                : SizedBox.shrink()
                           ],
                           brightness: Brightness.dark,
                           leading: IconButton(
-                              icon: Icon(Icons.arrow_back, color: Colors.white),
-                              onPressed: () => Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => HomePage(
-                                      isNew: false,
-                                    ),
-                                  ))),
+                              icon: Icon(Icons.arrow_back_ios,
+                                  color: Colors.white),
+                              onPressed: _willPopCallback),
                           centerTitle: true,
                           title: Text(
                             "$actualStation",
                             style: TextStyle(color: Colors.white),
                           )),
                       data(),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: ScrollPhysics(parent: BouncingScrollPhysics()),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  chartIndex = 1;
-                                });
-                              },
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20.0),
-                                ),
-                                margin: EdgeInsets.all(10),
-                                elevation: 5,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Text(''),
-                                      Image.asset('assets/agua.png',
-                                          width: chartIndex == 1 ? 70 : 30)
-                                    ],
-                                  ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                chartIndex = 1;
+                              });
+                            },
+                            child: Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20.0),
+                              ),
+                              margin: EdgeInsets.all(10),
+                              elevation: 5,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  children: <Widget>[
+                                    Text(''),
+                                    Image.asset('assets/agua.png',
+                                        width: chartIndex == 1 ? 70 : 30)
+                                  ],
                                 ),
                               ),
                             ),
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  chartIndex = 2;
-                                });
-                              },
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20.0),
-                                ),
-                                margin: EdgeInsets.all(10),
-                                elevation: 5,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Text(''),
-                                      Image.asset('assets/luz.png',
-                                          width: chartIndex == 2 ? 70 : 30)
-                                    ],
-                                  ),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                chartIndex = 2;
+                              });
+                            },
+                            child: Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20.0),
+                              ),
+                              margin: EdgeInsets.all(10),
+                              elevation: 5,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  children: <Widget>[
+                                    Text(''),
+                                    Image.asset('assets/luz.png',
+                                        width: chartIndex == 2 ? 70 : 30)
+                                  ],
                                 ),
                               ),
                             ),
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  chartIndex = 3;
-                                });
-                              },
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20.0),
-                                ),
-                                margin: EdgeInsets.all(10),
-                                elevation: 5,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Text(''),
-                                      Image.asset('assets/barometro.png',
-                                          width: chartIndex == 3 ? 70 : 30)
-                                    ],
-                                  ),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                chartIndex = 3;
+                              });
+                            },
+                            child: Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20.0),
+                              ),
+                              margin: EdgeInsets.all(10),
+                              elevation: 5,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  children: <Widget>[
+                                    Text(''),
+                                    Image.asset('assets/barometro.png',
+                                        width: chartIndex == 3 ? 70 : 30)
+                                  ],
                                 ),
                               ),
                             ),
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  chartIndex = 4;
-                                });
-                              },
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20.0),
-                                ),
-                                margin: EdgeInsets.all(10),
-                                elevation: 5,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Text(''),
-                                      Image.asset('assets/pluvi.png',
-                                          width: chartIndex == 4 ? 70 : 30)
-                                    ],
-                                  ),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                chartIndex = 4;
+                              });
+                            },
+                            child: Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20.0),
+                              ),
+                              margin: EdgeInsets.all(10),
+                              elevation: 5,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  children: <Widget>[
+                                    Text(''),
+                                    Image.asset('assets/pluvi.png',
+                                        width: chartIndex == 4 ? 70 : 30)
+                                  ],
                                 ),
                               ),
                             ),
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  chartIndex = 5;
-                                });
-                              },
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20.0),
-                                ),
-                                margin: EdgeInsets.all(10),
-                                elevation: 5,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Text(''),
-                                      Image.asset('assets/wind.png',
-                                          width: chartIndex == 5 ? 70 : 30)
-                                    ],
-                                  ),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                chartIndex = 5;
+                              });
+                            },
+                            child: Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20.0),
+                              ),
+                              margin: EdgeInsets.all(10),
+                              elevation: 5,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  children: <Widget>[
+                                    Text(''),
+                                    Image.asset('assets/wind.png',
+                                        width: chartIndex == 5 ? 70 : 30)
+                                  ],
                                 ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                       Text(
                         chartIndex == 1
-                            ? "Humedad v/s Hora"
+                            ? "Humedad/Hora"
                             : chartIndex == 2
-                                ? "Temperatura v/s Hora"
+                                ? "Temperatura/Hora"
                                 : chartIndex == 3
-                                    ? "Presión v/s Hora"
+                                    ? "Presión/Hora"
                                     : chartIndex == 4
-                                        ? "Mílimetros v/s Hora"
-                                        : "Velocidad de viento v/s Hora",
+                                        ? "Milímetros/Hora"
+                                        : "Velocidad de viento/Hora",
                         style: TextStyle(
                             fontSize: w * 0.07,
                             fontWeight: FontWeight.bold,
@@ -311,41 +311,66 @@ class _GraphicsState extends State<Graphics> {
                                 backgroundColor: Colors.transparent,
                                 elevation: 0,
                                 actions: <Widget>[
-                                  IconButton(
-                                      icon: Icon(
-                                        FontAwesomeIcons.satellite,
-                                        color: Colors.white,
-                                      ),
-                                      onPressed: () {
-                                        changeStation();
-                                      })
+                                  stations.length > 1
+                                      ? IconButton(
+                                          icon: Icon(
+                                            FontAwesomeIcons.satellite,
+                                            color: Colors.white,
+                                          ),
+                                          onPressed: () {
+                                            changeStation();
+                                          })
+                                      : SizedBox.shrink()
                                 ],
                                 brightness: Brightness.dark,
                                 leading: IconButton(
-                                    icon: Icon(Icons.arrow_back,
+                                    icon: Icon(Icons.arrow_back_ios,
                                         color: Colors.white),
-                                    onPressed: () => Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => HomePage(
-                                            isNew: false,
-                                          ),
-                                        ))),
+                                    onPressed: _willPopCallback),
                                 centerTitle: true,
                                 title: Text(
                                   "$actualStation",
                                   style: TextStyle(color: Colors.white),
                                 )),
-                            Text(
-                              widget.isNew
-                                  ? "No hay datos recientes en ${widget.station.replaceAll("_", " ").toUpperCase()}\n\n\n\n\n\n"
-                                  : "No hay datos recientes en ${stations.first.replaceAll("_", " ").toUpperCase()}\n\n\n\n\n\n",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: w * 0.1,
-                                  fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.center,
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(20))),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    widget.isNew
+                                        ? "No hay datos recientes en ${widget.station.replaceAll("_", " ").toUpperCase()}."
+                                            ""
+                                        : "No hay datos recientes en ${stations.first.replaceAll("_", " ").toUpperCase()}."
+                                            "",
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: w * 0.1,
+                                        fontWeight: FontWeight.w900),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
                             ),
+                            Expanded(
+                              child: FlareCacheBuilder(
+                                [asset],
+                                builder: (BuildContext context, bool isWarm) {
+                                  return !isWarm
+                                      ? Container(child: Text(""))
+                                      : FlareActor.asset(
+                                          asset,
+                                          alignment: Alignment.topCenter,
+                                          fit: BoxFit.contain,
+                                          animation: _animationName,
+                                        );
+                                },
+                              ),
+                            )
                           ],
                         ),
                       ],
@@ -451,7 +476,8 @@ class _GraphicsState extends State<Graphics> {
         } else {
           print(array);
           array.sort();
-          actualStation = station.first.toString();
+          actualStation =
+              station.first.toString().replaceAll("_", "").toUpperCase();
           for (var i = 0; i < array.length; i++) {
             Map<String, dynamic> itemMap = {
               "hour":
@@ -569,14 +595,26 @@ class _GraphicsState extends State<Graphics> {
         )).show();
   }
 
+  Future initGetData() async {
+    var prefs = await SharedPreferences.getInstance();
+    bool googleSaved = prefs.getBool("loginWithGoogle");
+    setState(() {
+      isLoggedGoogle = googleSaved;
+    });
+    print("LOOOOOOOOOOOOOOOOL " + isLoggedGoogle.toString());
+    return null;
+  }
+
   Future<bool> _willPopCallback() async {
+    await initGetData();
     Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomePage(
-            isNew: false,
-          ),
-        ));
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, a1, a2) =>
+            HomePage(isNew: false, isGoogle: isLoggedGoogle),
+      ),
+    );
+
     return false;
   }
 }

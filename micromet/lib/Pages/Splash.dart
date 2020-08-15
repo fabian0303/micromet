@@ -11,9 +11,11 @@ class Splash extends StatefulWidget {
 
 class _SplashState extends State<Splash> {
   bool isLogged;
+  bool isLoggedGoogle;
   @override
   void initState() {
     super.initState();
+    initGetData();
     timer();
     getLogin();
   }
@@ -56,7 +58,10 @@ class _SplashState extends State<Splash> {
                   backgroundColor: Colors.white,
                 ),
                 Text(""),
-                Text("MICROMET 2020", style: TextStyle(color: Colors.white),)
+                Text(
+                  "MICROMET 2020",
+                  style: TextStyle(color: Colors.white),
+                )
               ],
             ),
           ),
@@ -84,6 +89,7 @@ class _SplashState extends State<Splash> {
             context,
             MaterialPageRoute(
               builder: (context) => HomePage(
+                isGoogle: isLoggedGoogle,
                 isNew: false,
               ),
             ));
@@ -91,6 +97,14 @@ class _SplashState extends State<Splash> {
         Navigator.push(
             context, MaterialPageRoute(builder: (context) => Login()));
       }
+    });
+  }
+
+  initGetData() async {
+    var prefs = await SharedPreferences.getInstance();
+    bool googleSaved = prefs.getBool("loginWithGoogle");
+    setState(() {
+      isLoggedGoogle = googleSaved;
     });
   }
 }

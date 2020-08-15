@@ -1,10 +1,11 @@
 import 'package:animate_do/animate_do.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:line_awesome_icons/line_awesome_icons.dart';
 import 'package:micromet/Pages/Graphics.dart';
+import 'package:micromet/Pages/InfoPage.dart';
 import 'package:micromet/Pages/Login.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,7 +15,8 @@ class HomePage extends StatefulWidget {
   final String mail;
   final bool isNew;
   final String newStation;
-  HomePage({this.mail, this.isNew, this.newStation});
+  final bool isGoogle;
+  HomePage({this.mail, this.isNew, this.newStation, this.isGoogle});
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -24,6 +26,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    widget.isGoogle ? loadProfileData() : loadDefaultData();
     widget.isNew == false ? readData() : readNewData();
   }
 
@@ -42,41 +45,9 @@ class _HomePageState extends State<HomePage> {
   String grados = "";
   String windSpeed = "0";
   String windDirection = "";
-
-  Future<bool> _willPopCallback() async {
-    Alert(
-            style: AlertStyle(
-                animationType: AnimationType.shrink,
-                animationDuration: Duration(milliseconds: 300),
-                isOverlayTapDismiss: false),
-            title: "¿Está seguro(a) que desea cerrar la aplicación?",
-            buttons: [
-              DialogButton(
-                color: Colors.green,
-                onPressed: () {
-                  SystemNavigator.pop();
-                },
-                child: Text(
-                  "Cerrar app",
-                  style: TextStyle(color: Colors.white, fontSize: 20),
-                ),
-              ),
-              DialogButton(
-                color: Colors.red,
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text(
-                  "Cancelar",
-                  style: TextStyle(color: Colors.white, fontSize: 20),
-                ),
-              )
-            ],
-            context: context,
-            type: AlertType.warning)
-        .show();
-    return false;
-  }
+  String mailUser = "";
+  String nameUser = "";
+  String urlImage = "";
 
   Widget build(BuildContext context) {
     var w = MediaQuery.of(context).size.width;
@@ -170,13 +141,9 @@ class _HomePageState extends State<HomePage> {
                         width: w,
                         height: h,
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: <Widget>[
-                            Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Text("Estimado/a\n \nActualmente usted no cuenta con ninguna estación vinculada a su cuenta, por favor selecione una de las siguientes alternativas: ",style: TextStyle(color:Colors.white,fontSize: w*0.07,fontWeight: FontWeight.bold),textAlign: TextAlign.start),
-                            ),
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Row(
@@ -355,6 +322,7 @@ class _HomePageState extends State<HomePage> {
                           "Cargando datos...",
                           style: TextStyle(color: Colors.black, fontSize: 20),
                         ),
+                        Text(""),
                         CircularProgressIndicator(),
                       ],
                     ),
@@ -400,7 +368,7 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         children: <Widget>[
           Container(
-              height: h * 0.28,
+              height: widget.isGoogle ? h * 0.34 : h * 0.28,
               width: w,
               decoration: BoxDecoration(
                   color: Colors.green,
@@ -417,15 +385,35 @@ class _HomePageState extends State<HomePage> {
                     SizedBox(height: h * 0.05),
                     CircleAvatar(
                       radius: 50,
-                      backgroundImage: AssetImage("assets/logo.png"),
+                      backgroundImage: widget.isGoogle
+                          ? NetworkImage(urlImage)
+                          : AssetImage("assets/logo.png"),
                     ),
+                    widget.isGoogle ? Text("") : SizedBox.shrink(),
+                    widget.isGoogle
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                "$nameUser".toUpperCase(),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: w * 0.05,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          )
+                        : SizedBox.shrink(),
                     Text(""),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          "contacto@micromet.cl",
-                          style: TextStyle(color: Colors.white, fontSize: 20),
+                          "$mailUser",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: w * 0.05,
+                              fontWeight: FontWeight.bold),
                         ),
                       ],
                     )
@@ -435,7 +423,7 @@ class _HomePageState extends State<HomePage> {
           FadeInLeft(
             duration: Duration(milliseconds: 400),
             child: ListTile(
-              title: Text("Gráficos"),
+              title: Text("Gráficos", style: TextStyle(fontSize: w * 0.05)),
               leading: Image.asset(
                 "assets/grafico.png",
                 width: w * 0.15,
@@ -455,7 +443,8 @@ class _HomePageState extends State<HomePage> {
           FadeInLeft(
             duration: Duration(milliseconds: 600),
             child: ListTile(
-              title: Text("Datos historicos"),
+              title: Text("Datos históricos",
+                  style: TextStyle(fontSize: w * 0.05)),
               leading: Image.asset(
                 "assets/planta.png",
                 width: w * 0.15,
@@ -463,16 +452,33 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           Divider(),
-          SizedBox(
-            height: h * 0.3,
-          ),
-          Divider(),
           FadeInLeft(
             duration: Duration(milliseconds: 800),
             child: ListTile(
+              title: Text("Información", style: TextStyle(fontSize: w * 0.05)),
+              leading: Image.asset(
+                "assets/info.png",
+                width: w * 0.15,
+              ),
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => InfoPage(),
+                    ));
+              },
+            ),
+          ),
+          Divider(),
+          SizedBox(
+            height: widget.isGoogle ? h * 0.18 : h * 0.22,
+          ),
+          Divider(),
+          FadeInLeft(
+            duration: Duration(milliseconds: 1000),
+            child: ListTile(
               onTap: () async {
                 var prefs = await SharedPreferences.getInstance();
-
                 Alert(
                         style: AlertStyle(
                             animationType: AnimationType.shrink,
@@ -482,7 +488,9 @@ class _HomePageState extends State<HomePage> {
                         buttons: [
                           DialogButton(
                             color: Colors.green,
-                            onPressed: () {
+                            onPressed: () async {
+                              final FirebaseAuth _auth = FirebaseAuth.instance;
+                              _auth.signOut();
                               prefs.setBool("login", false);
                               Navigator.pushReplacement(
                                   context,
@@ -512,15 +520,21 @@ class _HomePageState extends State<HomePage> {
                         type: AlertType.warning)
                     .show();
               },
-              title: Text("Cerrar sesión"),
-              leading: Icon(LineAwesomeIcons.sign_out),
+              title:
+                  Text("Cerrar sesión", style: TextStyle(fontSize: w * 0.05)),
+              leading: Image.asset(
+                "assets/logout.png",
+                width: w * 0.15,
+              ),
             ),
           ),
           Divider(),
           SizedBox(
             height: h * 0.04,
           ),
-          Text("Micromet 2020")
+          FadeInUp(
+              duration: Duration(milliseconds: 1200),
+              child: Text("Micromet 2020"))
         ],
       ),
     );
@@ -546,33 +560,48 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: <Widget>[
                   lumenes > 51 && lumenes < 1075 && mm <= 1
-                      ? Icon(
-                          FontAwesomeIcons.cloud,
-                          size: w * 0.15,
-                          color: Colors.white,
+                      ? FadeInDown(
+                          duration: Duration(milliseconds: 400),
+                          child: Icon(
+                            FontAwesomeIcons.cloud,
+                            size: w * 0.15,
+                            color: Colors.white,
+                          ),
                         )
                       : lumenes < 51 && mm <= 1
-                          ? Icon(
-                              FontAwesomeIcons.moon,
-                              size: w * 0.15,
-                              color: Colors.white,
+                          ? FadeInDown(
+                              duration: Duration(milliseconds: 400),
+                              child: Icon(
+                                FontAwesomeIcons.moon,
+                                size: w * 0.15,
+                                color: Colors.white,
+                              ),
                             )
                           : lumenes > 1075 && mm <= 1
-                              ? Icon(
-                                  FontAwesomeIcons.sun,
-                                  size: w * 0.15,
-                                  color: Colors.white,
+                              ? FadeInDown(
+                                  duration: Duration(milliseconds: 400),
+                                  child: Icon(
+                                    FontAwesomeIcons.sun,
+                                    size: w * 0.15,
+                                    color: Colors.white,
+                                  ),
                                 )
                               : mm > 1
-                                  ? Icon(
-                                      FontAwesomeIcons.cloudRain,
-                                      size: w * 0.15,
-                                      color: Colors.white,
+                                  ? FadeInDown(
+                                      duration: Duration(milliseconds: 400),
+                                      child: Icon(
+                                        FontAwesomeIcons.cloudRain,
+                                        size: w * 0.15,
+                                        color: Colors.white,
+                                      ),
                                     )
-                                  : Icon(
-                                      FontAwesomeIcons.question,
-                                      size: w * 0.15,
-                                      color: Colors.white,
+                                  : FadeInDown(
+                                      duration: Duration(milliseconds: 400),
+                                      child: Icon(
+                                        FontAwesomeIcons.question,
+                                        size: w * 0.15,
+                                        color: Colors.white,
+                                      ),
                                     ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -630,21 +659,24 @@ class _HomePageState extends State<HomePage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            Image.asset(
-                              "assets/wind.png",
-                              width: w * 0.09,
-                              color: Colors.white,
-                            ),
-                            Text(
-                              " $windSpeed km/h",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: w * 0.07,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ],
+                        FadeInLeft(
+                          duration: Duration(milliseconds: 400),
+                          child: Row(
+                            children: <Widget>[
+                              Image.asset(
+                                "assets/wind.png",
+                                width: w * 0.09,
+                                color: Colors.white,
+                              ),
+                              Text(
+                                " $windSpeed km/h",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: w * 0.07,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
                         ),
                         FadeInRight(
                           duration: Duration(milliseconds: 400),
@@ -656,7 +688,8 @@ class _HomePageState extends State<HomePage> {
                               //   size: w * 0.09,
                               // ),
                               Text(
-                                "${windDirection == "O" ? "OESTE" : windDirection == "E" ? "ESTE" : windDirection == "N" ? "NORTE" : windDirection == "S" ? "SUR" : windDirection == "SE" ? "SURESTE" : windDirection == "NO" ? "NOROESTE" : windDirection == "NE" ? "NORESTE" : windDirection == "SO" ? "SUROESTE" : "?"}",
+                                "${windDirection == "O" ? "Oeste" : windDirection == "E" ? "Este" : windDirection == "N" ? "Norte" : windDirection == "S" ? "Sur" : windDirection == "SE" ? "Sureste" : windDirection == "NO" ? "Noroeste" : windDirection == "NE" ? "Noreste" : windDirection == "SO" ? "Suroreste" : "?"}"
+                                    .toUpperCase(),
                                 style: TextStyle(
                                     color: Colors.white,
                                     fontSize: w * 0.06,
@@ -725,7 +758,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   Text(""),
                                   Text(
-                                    "$mm \n mm",
+                                    "$mm \n mm.",
                                     style: TextStyle(
                                         color: Colors.white,
                                         fontSize: w * 0.07,
@@ -837,6 +870,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  //----------------------------------------------Fin UI-----------------------------------------------------------
+
+  //---------------------------------------INICIO FUNCIONES------------------------------------------------
+
 //Leer data cuando es sólo una estación
   void readData() async {
     var key = [];
@@ -847,7 +884,6 @@ class _HomePageState extends State<HomePage> {
       var datos =
           dataSnapshot.value[mail.replaceAll("@", "").replaceAll(".", "")];
       var station = datos;
-      print("STATION " + station.toString());
       if (station.toString() == "null") {
         setState(() {
           existsStations = false;
@@ -877,9 +913,6 @@ class _HomePageState extends State<HomePage> {
             }
           }
           actualStation = station.first;
-          print("MAAAAX $max");
-          print(datos[station.first]["$max"]);
-          print(datos[station.first]["$max"]["fecha"]);
 
           dateAct = datos[station.first]["$max"]["fecha"].toString() +
               " a las " +
@@ -902,7 +935,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-//Leer data cuando es más de una
+//Leer data cuando es más de una estación
   void readNewData() async {
     List key = [];
     var prefs = await SharedPreferences.getInstance();
@@ -940,8 +973,8 @@ class _HomePageState extends State<HomePage> {
         grados = datos[widget.newStation]["$max"]["temperatura"].toString();
         windDirection =
             datos[widget.newStation]["$max"]["direccion_viento"].toString();
-        windSpeed = datos[widget.newStation]["$max"]["velocidad_viento"]
-            .toString();
+        windSpeed =
+            datos[widget.newStation]["$max"]["velocidad_viento"].toString();
         lumenes = datos[widget.newStation]["$max"]["luminosidad"].toInt();
         mm =
             double.parse(datos[widget.newStation]["$max"]["lluvia"].toString());
@@ -955,6 +988,7 @@ class _HomePageState extends State<HomePage> {
     print(grados);
   }
 
+  //Función para mostrar ventana para cambiar de estación
   changeStation() {
     return Alert(
         buttons: [],
@@ -967,5 +1001,62 @@ class _HomePageState extends State<HomePage> {
           values: stations,
           graphics: false,
         )).show();
+  }
+
+  //Función que se ejecuta cuando el usuario presiona back
+  Future<bool> _willPopCallback() async {
+    Alert(
+            style: AlertStyle(
+                animationType: AnimationType.shrink,
+                animationDuration: Duration(milliseconds: 300),
+                isOverlayTapDismiss: false),
+            title: "¿Está seguro(a) que desea cerrar la aplicación?",
+            buttons: [
+              DialogButton(
+                color: Colors.green,
+                onPressed: () {
+                  SystemNavigator.pop();
+                },
+                child: Text(
+                  "Cerrar app",
+                  style: TextStyle(color: Colors.white, fontSize: 20),
+                ),
+              ),
+              DialogButton(
+                color: Colors.red,
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  "Cancelar",
+                  style: TextStyle(color: Colors.white, fontSize: 20),
+                ),
+              )
+            ],
+            context: context,
+            type: AlertType.warning)
+        .show();
+    return false;
+  }
+
+  //Función para cargar datos de perfil si es que usuario inicia sesión con google
+  loadProfileData() async {
+    var prefs = await SharedPreferences.getInstance();
+    String mailSaved = prefs.getString("mail");
+    String urlPhotoSaved = prefs.getString("imageUrl");
+    String nameUserSaved = prefs.getString("nameGoogle");
+    setState(() {
+      mailUser = mailSaved;
+      nameUser = nameUserSaved;
+      urlImage = urlPhotoSaved;
+    });
+  }
+
+  loadDefaultData() async {
+    var prefs = await SharedPreferences.getInstance();
+    String mailSaved = prefs.getString("mail");
+    setState(() {
+      mailUser = mailSaved;
+    });
   }
 }

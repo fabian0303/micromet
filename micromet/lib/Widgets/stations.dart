@@ -30,32 +30,33 @@ class _StationsState extends State<Stations> {
             },
             items: widget.values.map((station) {
               return DropdownMenuItem(
-                child: new Text(station.toString().replaceAll("_", " ").toUpperCase(), style: TextStyle(fontSize: 20)),
+                child: new Text(
+                    station.toString().replaceAll("_", " ").toUpperCase(),
+                    style: TextStyle(fontSize: 20)),
                 value: station,
               );
             }).toList()),
         Text(""),
         RaisedButton(
             onPressed: () {
-              Navigator.pop(context);
               if (widget.graphics) {
                 Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => Graphics(
-                      isNew: true,
-                      station: dropVal,
-                    ),
-                  ));
-              }else{
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, a1, a2) => Graphics(
+                        isNew: true,
+                        station: dropVal,
+                      ),
+                    ));
+              } else {
                 Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => HomePage(
-                      isNew: true,
-                      newStation: dropVal,
-                    ),
-                  ));
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, a1, a2) => HomePage(
+                        isNew: true,
+                        newStation: dropVal,
+                      ),
+                    ));
               }
             },
             color: Colors.green,

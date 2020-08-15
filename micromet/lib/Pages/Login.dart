@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:line_awesome_icons/line_awesome_icons.dart';
 import 'package:micromet/Pages/HomePage.dart';
 import 'package:micromet/Widgets/Text.dart';
@@ -25,6 +26,14 @@ class _LoginState extends State<Login> {
   TextEditingController emailReg = TextEditingController();
   TextEditingController passReg = TextEditingController();
   TextEditingController pass2Reg = TextEditingController();
+  String mailGoogle = "";
+  String imgUrlGoogle = "";
+  String nameGoogle = "";
+
+  bool errorEmailRegister = false;
+  String messageErrorRegister = "";
+  bool errorEmail = false;
+  String messageErrorMail = "";
 
   @override
   Widget build(BuildContext context) {
@@ -96,11 +105,12 @@ class _LoginState extends State<Login> {
           ]).show();
     } else {
       try {
-        var user = await FirebaseAuth.instance
-            .signInWithEmailAndPassword(email: email.text.replaceAll(" ", ""), password: pass.text);
+        var user = await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: email.text.replaceAll(" ", ""), password: pass.text);
         print(user.additionalUserInfo.username);
         var prefs = await SharedPreferences.getInstance();
         prefs.setBool("login", true);
+        prefs.setBool("loginWithGoogle", false);
         prefs.setString("mail", email.text.replaceAll(" ", ""));
         Navigator.push(
             context,
@@ -108,6 +118,7 @@ class _LoginState extends State<Login> {
               builder: (context) => HomePage(
                 mail: email.text.replaceAll(" ", ""),
                 isNew: false,
+                isGoogle: false,
               ),
             ));
       } catch (e) {
@@ -332,7 +343,30 @@ class _LoginState extends State<Login> {
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: <Widget>[
                                 FloatingActionButton(
-                                    onPressed: () {},
+                                    onPressed: () {
+                                      signInWithGoogle().whenComplete(() async {
+                                        var prefs = await SharedPreferences
+                                            .getInstance();
+                                        prefs.setBool("login", true);
+                                        prefs.setBool("loginWithGoogle", true);
+                                        prefs.setString("mail", mailGoogle);
+                                        prefs.setString(
+                                            "imageUrl", imgUrlGoogle);
+                                        prefs.setString(
+                                            "nameGoogle", nameGoogle);
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) {
+                                              return HomePage(
+                                                mail: mailGoogle,
+                                                isNew: false,
+                                                isGoogle: true,
+                                              );
+                                            },
+                                          ),
+                                        );
+                                      });
+                                    },
                                     child: Icon(FontAwesomeIcons.google,
                                         color: Colors.white),
                                     backgroundColor: Colors.red),
@@ -372,6 +406,48 @@ class _LoginState extends State<Login> {
       ],
     );
   }
+
+  Future<String> signInWithGoogle() async {
+    print("Inicio");
+    final FirebaseAuth _auth = FirebaseAuth.instance;
+    final GoogleSignIn googleSignIn = GoogleSignIn();
+    final GoogleSignInAccount googleSignInAccount = await googleSignIn.signIn();
+    final GoogleSignInAuthentication googleSignInAuthentication =
+        await googleSignInAccount.authentication;
+    print(_auth.currentUser());
+
+    final AuthCredential credential = GoogleAuthProvider.getCredential(
+      accessToken: googleSignInAuthentication.accessToken,
+      idToken: googleSignInAuthentication.idToken,
+    );
+
+    print("Auth result");
+
+    final AuthResult authResult = await _auth.signInWithCredential(credential);
+    final FirebaseUser user = authResult.user;
+
+    assert(!user.isAnonymous);
+    assert(await user.getIdToken() != null);
+
+    print("Anonymus");
+
+    final FirebaseUser currentUser = await _auth.currentUser();
+    assert(user.uid == currentUser.uid);
+
+    print('signInWithGoogle succeeded: $user');
+    print("${user.email}");
+    print(user.photoUrl);
+    print(user.displayName);
+    setState(() {
+      mailGoogle = user.email;
+      imgUrlGoogle = user.photoUrl;
+      nameGoogle = user.displayName;
+    });
+
+    return 'signInWithGoogle succeeded: $user';
+  }
+
+  void signOutGoogle() async {}
 
   Widget recoverPass() {
     var w = MediaQuery.of(context).size.width;
@@ -475,7 +551,7 @@ class _LoginState extends State<Login> {
                                   color: Colors.white,
                                   fontSize: 20,
                                   fontWeight: FontWeight.w700)),
-                          onPressed: () {
+                          onPressed: () async {
                             if (emailRecup.text.isEmpty) {
                               Alert(
                                   style: AlertStyle(
@@ -497,29 +573,87 @@ class _LoginState extends State<Login> {
                                         })
                                   ]).show();
                             } else {
-                              FirebaseAuth.instance.sendPasswordResetEmail(
-                                  email: emailRecup.text);
-
-                              Alert(
-                                  style: AlertStyle(
-                                      isCloseButton: false,
-                                      animationType: AnimationType.grow,
-                                      animationDuration:
-                                          Duration(milliseconds: 500)),
-                                  context: context,
-                                  type: AlertType.success,
-                                  title: "REALIZADO",
-                                  desc:
-                                      "Se ha enviado un correo a la dirección indicada.",
-                                  buttons: [
-                                    DialogButton(
-                                        child: Text("Aceptar",
-                                            style:
-                                                TextStyle(color: Colors.white)),
-                                        onPressed: () {
-                                          Navigator.pop(context);
-                                        })
-                                  ]).show();
+                              await getEmailVerification();
+                              print("Two " + errorEmail.toString());
+                              if (errorEmail) {
+                                if (messageErrorMail.contains("formatted")) {
+                                  Alert(
+                                      style: AlertStyle(
+                                          isCloseButton: false,
+                                          animationType: AnimationType.grow,
+                                          animationDuration:
+                                              Duration(milliseconds: 500)),
+                                      context: context,
+                                      type: AlertType.error,
+                                      title: "ERROR",
+                                      desc:
+                                          "El correo indicado no es válido. Ingrese uno correcto.",
+                                      buttons: [
+                                        DialogButton(
+                                            color: Colors.red,
+                                            child: Text("Aceptar",
+                                                style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: w * 0.05)),
+                                            onPressed: () {
+                                              Navigator.pop(context);
+                                              errorEmail = false;
+                                            })
+                                      ]).show();
+                                } else {
+                                  Alert(
+                                      style: AlertStyle(
+                                          isCloseButton: false,
+                                          animationType: AnimationType.grow,
+                                          animationDuration:
+                                              Duration(milliseconds: 500)),
+                                      context: context,
+                                      type: AlertType.error,
+                                      title: "ERROR",
+                                      desc:
+                                          "El correo indicado no se encuentra registrado en nuestros datos.",
+                                      buttons: [
+                                        DialogButton(
+                                            color: Colors.red,
+                                            child: Text("Aceptar",
+                                                style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: w * 0.05)),
+                                            onPressed: () {
+                                              Navigator.pop(context);
+                                              errorEmail = false;
+                                            })
+                                      ]).show();
+                                }
+                              } else {
+                                Alert(
+                                    style: AlertStyle(
+                                        isCloseButton: false,
+                                        animationType: AnimationType.grow,
+                                        animationDuration:
+                                            Duration(milliseconds: 500)),
+                                    context: context,
+                                    type: AlertType.success,
+                                    title: "REALIZADO",
+                                    desc:
+                                        "Se ha enviado un correo a la dirección indicada.",
+                                    buttons: [
+                                      DialogButton(
+                                          child: Text("Aceptar",
+                                              style: TextStyle(
+                                                  color: Colors.white)),
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            _pageController.previousPage(
+                                                duration: Duration(
+                                                    milliseconds: 1000),
+                                                curve: Curves.fastOutSlowIn);
+                                            setState(() {
+                                              errorEmail = false;
+                                            });
+                                          })
+                                    ]).show();
+                              }
                             }
                           },
                           hoverColor: Colors.greenAccent,
@@ -570,6 +704,21 @@ class _LoginState extends State<Login> {
         )
       ],
     );
+  }
+
+  Future getEmailVerification() async {
+    await FirebaseAuth.instance
+        .sendPasswordResetEmail(email: emailRecup.text.replaceAll(" ", ""))
+        .catchError((onError) {
+      print(onError.message);
+      setState(() {
+        errorEmail = true;
+        messageErrorMail = onError.message;
+      });
+      print("One " + errorEmail.toString());
+    });
+
+    return null;
   }
 
   Widget createUser() {
@@ -846,7 +995,8 @@ class _LoginState extends State<Login> {
                                       desc: "Las contraseñas no coinciden.")
                                   .show();
                             } else {
-                              handleSignUp(emailReg.text, passReg.text);
+                              handleSignUp(emailReg.text.replaceAll(" ", ""),
+                                  passReg.text);
                             }
                           },
                           hoverColor: Colors.greenAccent,
@@ -870,30 +1020,140 @@ class _LoginState extends State<Login> {
     );
   }
 
-  Future<FirebaseUser> handleSignUp(String email, String password) async {
+  Future getDataEmail(String email, String password) async {
     final FirebaseAuth auth = FirebaseAuth.instance;
-    AuthResult result = await auth.createUserWithEmailAndPassword(
-        email: email, password: password);
-    final FirebaseUser user = result.user;
-    assert(user != null);
-    assert(await user.getIdToken() != null);
+    print("Init");
+    await auth
+        .createUserWithEmailAndPassword(email: email, password: password)
+        .catchError((onError) {
+      setState(() {
+        errorEmailRegister = true;
+        messageErrorRegister = onError.message;
+        print("ERRORRRRRR ${onError.message}");
+      });
+    });
+    return null;
+  }
 
-    Alert(
-        style: AlertStyle(
-            isCloseButton: false,
-            animationType: AnimationType.grow,
-            animationDuration: Duration(milliseconds: 500)),
-        context: context,
-        type: AlertType.success,
-        title: "REALIZADO",
-        desc: "Se ha registrado el nuevo usuario.",
-        buttons: [
-          DialogButton(
-              child: Text("Aceptar", style: TextStyle(color: Colors.white)),
-              onPressed: () {
-                Navigator.pop(context);
-              })
-        ]).show();
-    return user;
+  handleSignUp(String email, String password) async {
+    var w = MediaQuery.of(context).size.width;
+    await getDataEmail(email, password);
+    // final FirebaseUser user = result.user;
+
+    if (errorEmailRegister) {
+      if (messageErrorRegister.contains("already")) {
+        Alert(
+            style: AlertStyle(
+                isCloseButton: false,
+                animationType: AnimationType.grow,
+                animationDuration: Duration(milliseconds: 500)),
+            context: context,
+            type: AlertType.error,
+            title: "ERROR",
+            desc: "Este correo ya está en uso por un usuario.",
+            buttons: [
+              DialogButton(
+                  color: Colors.red,
+                  child: Text("Aceptar",
+                      style:
+                          TextStyle(color: Colors.white, fontSize: w * 0.07)),
+                  onPressed: () {
+                    setState(() {
+                      errorEmailRegister = false;
+                    });
+                    Navigator.pop(context);
+                  })
+            ]).show();
+      } else if (messageErrorRegister.contains("formatted")) {
+        Alert(
+            style: AlertStyle(
+                isCloseButton: false,
+                animationType: AnimationType.grow,
+                animationDuration: Duration(milliseconds: 500)),
+            context: context,
+            type: AlertType.error,
+            title: "ERROR",
+            desc: "El correo ingresado es inválido. Ingrese uno correcto.",
+            buttons: [
+              DialogButton(
+                  color: Colors.red,
+                  child: Text("Aceptar",
+                      style:
+                          TextStyle(color: Colors.white, fontSize: w * 0.07)),
+                  onPressed: () {
+                    setState(() {
+                      errorEmailRegister = false;
+                    });
+                    Navigator.pop(context);
+                  })
+            ]).show();
+      } else if (messageErrorRegister.contains("Password should")) {
+        Alert(
+            style: AlertStyle(
+                isCloseButton: false,
+                animationType: AnimationType.grow,
+                animationDuration: Duration(milliseconds: 500)),
+            context: context,
+            type: AlertType.error,
+            title: "ERROR",
+            desc: "La contraseña debe tener como mínimo 6 caracteres.",
+            buttons: [
+              DialogButton(
+                  color: Colors.red,
+                  child: Text("Aceptar",
+                      style:
+                          TextStyle(color: Colors.white, fontSize: w * 0.07)),
+                  onPressed: () {
+                    setState(() {
+                      errorEmailRegister = false;
+                    });
+                    Navigator.pop(context);
+                  })
+            ]).show();
+      } else {
+        Alert(
+            style: AlertStyle(
+                isCloseButton: false,
+                animationType: AnimationType.grow,
+                animationDuration: Duration(milliseconds: 500)),
+            context: context,
+            type: AlertType.error,
+            title: "ERROR",
+            desc: "Ha ocurrido un error al intentar registrar al usuario.",
+            buttons: [
+              DialogButton(
+                  color: Colors.red,
+                  child: Text("Aceptar",
+                      style:
+                          TextStyle(color: Colors.white, fontSize: w * 0.07)),
+                  onPressed: () {
+                    setState(() {
+                      errorEmailRegister = false;
+                    });
+                    Navigator.pop(context);
+                  })
+            ]).show();
+      }
+    } else {
+      Alert(
+          style: AlertStyle(
+              isCloseButton: false,
+              animationType: AnimationType.grow,
+              animationDuration: Duration(milliseconds: 500)),
+          context: context,
+          type: AlertType.success,
+          title: "REALIZADO",
+          desc: "Se ha registrado el nuevo usuario.",
+          buttons: [
+            DialogButton(
+                child: Text("Aceptar", style: TextStyle(color: Colors.white)),
+                onPressed: () {
+                  Navigator.pop(context);
+                  _pageController.nextPage(
+                      duration: Duration(milliseconds: 1000),
+                      curve: Curves.fastOutSlowIn);
+                })
+          ]).show();
+    }
   }
 }
