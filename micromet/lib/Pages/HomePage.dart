@@ -4,12 +4,13 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:micromet/Pages/Graphics.dart';
-import 'package:micromet/Pages/InfoPage.dart';
 import 'package:micromet/Pages/Login.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Widgets/stations.dart';
+import 'InfoPage.dart';
 
 class HomePage extends StatefulWidget {
   final String mail;
@@ -29,6 +30,9 @@ class _HomePageState extends State<HomePage> {
     widget.isGoogle ? loadProfileData() : loadDefaultData();
     widget.isNew == false ? readData() : readNewData();
   }
+
+  var _googleSignIn = GoogleSignIn();
+  var _firebaseAuth = FirebaseAuth.instance;
 
   bool existsStations = true;
   bool loaded = false;
@@ -141,9 +145,20 @@ class _HomePageState extends State<HomePage> {
                         width: w,
                         height: h,
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: <Widget>[
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(left: 15.0, right: 15),
+                              child: Text(
+                                "Estimado(a):\nActualmente no posee ninguna estación asociada a su cuenta, por favor seleccione una de las siguientes opciones:",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: w * 0.07),
+                              ),
+                            ),
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Row(
@@ -228,7 +243,6 @@ class _HomePageState extends State<HomePage> {
                                     onTap: () async {
                                       var prefs =
                                           await SharedPreferences.getInstance();
-
                                       Alert(
                                               style: AlertStyle(
                                                   animationType:
@@ -241,7 +255,7 @@ class _HomePageState extends State<HomePage> {
                                               buttons: [
                                                 DialogButton(
                                                   color: Colors.green,
-                                                  onPressed: () {
+                                                  onPressed: () async {
                                                     prefs.setBool(
                                                         "login", false);
                                                     Navigator.pushReplacement(
@@ -250,6 +264,7 @@ class _HomePageState extends State<HomePage> {
                                                           builder: (context) =>
                                                               Login(),
                                                         ));
+                                                    await signOutAll();
                                                   },
                                                   child: Text(
                                                     "Cerrar",
@@ -335,7 +350,6 @@ class _HomePageState extends State<HomePage> {
   Widget _floating() {
     return FloatingActionButton.extended(
       onPressed: () {
-        print(DateTime.now().toString());
         setState(() {
           loaded = false;
         });
@@ -433,24 +447,25 @@ class _HomePageState extends State<HomePage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => Graphics(
-                        isNew: false,
+                        isNew: true,
+                        station: actualStation.replaceAll(" ", "_"),
                       ),
                     ));
               },
             ),
           ),
-          Divider(),
-          FadeInLeft(
-            duration: Duration(milliseconds: 600),
-            child: ListTile(
-              title: Text("Datos históricos",
-                  style: TextStyle(fontSize: w * 0.05)),
-              leading: Image.asset(
-                "assets/planta.png",
-                width: w * 0.15,
-              ),
-            ),
-          ),
+          // Divider(),
+          // FadeInLeft(
+          //   duration: Duration(milliseconds: 600),
+          //   child: ListTile(
+          //     title: Text("Datos históricos",
+          //         style: TextStyle(fontSize: w * 0.05)),
+          //     leading: Image.asset(
+          //       "assets/planta.png",
+          //       width: w * 0.15,
+          //     ),
+          //   ),
+          // ),
           Divider(),
           FadeInLeft(
             duration: Duration(milliseconds: 800),
@@ -471,7 +486,7 @@ class _HomePageState extends State<HomePage> {
           ),
           Divider(),
           SizedBox(
-            height: widget.isGoogle ? h * 0.18 : h * 0.22,
+            height: widget.isGoogle ? h * 0.24 : h * 0.28,
           ),
           Divider(),
           FadeInLeft(
@@ -489,14 +504,13 @@ class _HomePageState extends State<HomePage> {
                           DialogButton(
                             color: Colors.green,
                             onPressed: () async {
-                              final FirebaseAuth _auth = FirebaseAuth.instance;
-                              _auth.signOut();
                               prefs.setBool("login", false);
                               Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => Login(),
                                   ));
+                              await signOutAll();
                             },
                             child: Text(
                               "Cerrar",
@@ -758,7 +772,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   Text(""),
                                   Text(
-                                    "$mm \n mm.",
+                                    "$mm \n mm",
                                     style: TextStyle(
                                         color: Colors.white,
                                         fontSize: w * 0.07,
@@ -905,13 +919,8 @@ class _HomePageState extends State<HomePage> {
             key.add(i);
           }
           var max = 0;
-          for (var i = 0; i < key.length; i++) {
-            if (int.parse(key[i]) > max) {
-              setState(() {
-                max = int.parse(key[i]);
-              });
-            }
-          }
+          key.sort();
+          max = int.parse(key[key.length - 2]);
           actualStation = station.first;
 
           dateAct = datos[station.first]["$max"]["fecha"].toString() +
@@ -923,7 +932,8 @@ class _HomePageState extends State<HomePage> {
           windSpeed =
               datos[station.first]["$max"]["velocidad_viento"].toString();
           lumenes = datos[station.first]["$max"]["luminosidad"].toInt();
-          mm = double.parse(datos[station.first]["$max"]["lluvia"].toString());
+          mm = double.parse(
+              datos[station.first]["$max"]["lluvia"].toStringAsFixed(2));
           humedad = datos[station.first]["$max"]["humedad"].toInt();
           hPa = datos[station.first]["$max"]["presion"].toInt();
           setState(() {
@@ -958,13 +968,9 @@ class _HomePageState extends State<HomePage> {
           key.add(i);
         }
         var max = 0;
-        for (var i = 0; i < key.length; i++) {
-          if (int.parse(key[i]) > max) {
-            setState(() {
-              max = int.parse(key[i]);
-            });
-          }
-        }
+        key.sort();
+        max = int.parse(key[key.length - 2]);
+        actualStation = station.first;
         actualStation = widget.newStation;
         print(datos[widget.newStation]);
         dateAct = datos[widget.newStation]["$max"]["fecha"].toString() +
@@ -976,8 +982,8 @@ class _HomePageState extends State<HomePage> {
         windSpeed =
             datos[widget.newStation]["$max"]["velocidad_viento"].toString();
         lumenes = datos[widget.newStation]["$max"]["luminosidad"].toInt();
-        mm =
-            double.parse(datos[widget.newStation]["$max"]["lluvia"].toString());
+        mm = double.parse(
+            datos[widget.newStation]["$max"]["lluvia"].toStringAsFixed(2));
         humedad = datos[widget.newStation]["$max"]["humedad"].toInt();
         hPa = datos[widget.newStation]["$max"]["presion"].toInt();
         setState(() {
@@ -998,6 +1004,7 @@ class _HomePageState extends State<HomePage> {
         title: "Cambiar estación",
         desc: "Seleccione una estación para ver sus datos:",
         content: Stations(
+          value: actualStation.replaceAll(" ", "_"),
           values: stations,
           graphics: false,
         )).show();
@@ -1058,5 +1065,12 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       mailUser = mailSaved;
     });
+  }
+
+  Future signOutAll() async {
+    await _googleSignIn.disconnect();
+    await _firebaseAuth.signOut();
+    await _googleSignIn.signOut();
+    return null;
   }
 }

@@ -29,6 +29,7 @@ class _LoginState extends State<Login> {
   String mailGoogle = "";
   String imgUrlGoogle = "";
   String nameGoogle = "";
+  bool emailSelected = true;
 
   bool errorEmailRegister = false;
   String messageErrorRegister = "";
@@ -343,8 +344,14 @@ class _LoginState extends State<Login> {
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: <Widget>[
                                 FloatingActionButton(
-                                    onPressed: () {
-                                      signInWithGoogle().whenComplete(() async {
+                                    onPressed: () async {
+                                      await signInWithGoogle()
+                                          .catchError((onError) {
+                                        setState(() {
+                                          emailSelected = false;
+                                        });
+                                      });
+                                      if (emailSelected) {
                                         var prefs = await SharedPreferences
                                             .getInstance();
                                         prefs.setBool("login", true);
@@ -365,7 +372,35 @@ class _LoginState extends State<Login> {
                                             },
                                           ),
                                         );
-                                      });
+                                      } else {
+                                        Alert(
+                                            desc:
+                                                "Debe seleccionar un email. En caso de no haber ninguno deberá crear una nueva cuenta.",
+                                            type: AlertType.error,
+                                            style: AlertStyle(
+                                                isCloseButton: false,
+                                                animationType:
+                                                    AnimationType.grow,
+                                                animationDuration: Duration(
+                                                    milliseconds: 500)),
+                                            context: context,
+                                            title: "ERROR",
+                                            buttons: [
+                                              DialogButton(
+                                                  color: Colors.red,
+                                                  child: Text(
+                                                    "Aceptar",
+                                                    style: TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      emailSelected = true;
+                                                    });
+                                                    Navigator.pop(context);
+                                                  })
+                                            ]).show();
+                                      }
                                     },
                                     child: Icon(FontAwesomeIcons.google,
                                         color: Colors.white),

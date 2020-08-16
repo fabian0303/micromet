@@ -34,7 +34,7 @@ class _InfoPageState extends State<InfoPage> {
                         onPressed: () => Navigator.pop(context)),
                     centerTitle: true,
                     title: Text(
-                      "Información de app",
+                      "Información de app".toUpperCase(),
                       style: TextStyle(color: Colors.white),
                     )),
                 Text(""),
@@ -94,7 +94,7 @@ class _InfoPageState extends State<InfoPage> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 10.0),
                         child: Text(
-                          "Contacto@micromet.cl",
+                          "contacto@micromet.cl",
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: w * 0.07,

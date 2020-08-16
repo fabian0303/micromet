@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:micromet/Pages/Graphics.dart';
 import 'package:micromet/Pages/HomePage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Stations extends StatefulWidget {
+  final String value;
   final List values;
   final bool graphics;
-  Stations({this.values, this.graphics});
+  Stations({this.values, this.graphics, this.value});
   @override
   _StationsState createState() => _StationsState();
 }
@@ -13,6 +15,10 @@ class Stations extends StatefulWidget {
 class _StationsState extends State<Stations> {
   String dropVal;
   @override
+  void initState() { 
+    super.initState();
+    dropVal = widget.value;
+  }
   Widget build(BuildContext context) {
     return Container(
         child: Column(
@@ -38,7 +44,7 @@ class _StationsState extends State<Stations> {
             }).toList()),
         Text(""),
         RaisedButton(
-            onPressed: () {
+            onPressed: () async {
               if (widget.graphics) {
                 Navigator.push(
                     context,
@@ -49,12 +55,15 @@ class _StationsState extends State<Stations> {
                       ),
                     ));
               } else {
+                var prefs = await SharedPreferences.getInstance();
+                bool google = prefs.getBool("loginWithGoogle");
                 Navigator.push(
                     context,
                     PageRouteBuilder(
                       pageBuilder: (_, a1, a2) => HomePage(
                         isNew: true,
                         newStation: dropVal,
+                        isGoogle: google,
                       ),
                     ));
               }
