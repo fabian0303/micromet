@@ -107,17 +107,19 @@ class _LoginState extends State<Login> {
     } else {
       try {
         var user = await FirebaseAuth.instance.signInWithEmailAndPassword(
-            email: email.text.replaceAll(" ", ""), password: pass.text);
+            email: email.text.replaceAll(" ", "").toLowerCase(),
+            password: pass.text);
         print(user.additionalUserInfo.username);
         var prefs = await SharedPreferences.getInstance();
         prefs.setBool("login", true);
         prefs.setBool("loginWithGoogle", false);
-        prefs.setString("mail", email.text.replaceAll(" ", ""));
+        prefs.setString("mail", email.text.replaceAll(" ", "").toLowerCase());
+
         Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => HomePage(
-                mail: email.text.replaceAll(" ", ""),
+                mail: email.text.replaceAll(" ", "").toLowerCase(),
                 isNew: false,
                 isGoogle: false,
               ),
@@ -361,6 +363,7 @@ class _LoginState extends State<Login> {
                                             "imageUrl", imgUrlGoogle);
                                         prefs.setString(
                                             "nameGoogle", nameGoogle);
+
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (context) {
@@ -481,8 +484,6 @@ class _LoginState extends State<Login> {
 
     return 'signInWithGoogle succeeded: $user';
   }
-
-  void signOutGoogle() async {}
 
   Widget recoverPass() {
     var w = MediaQuery.of(context).size.width;
